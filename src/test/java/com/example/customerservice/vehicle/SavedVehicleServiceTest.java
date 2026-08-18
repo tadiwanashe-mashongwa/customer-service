@@ -44,4 +44,24 @@ class SavedVehicleServiceTest {
 
         assertThat(service.list(subject)).containsExactly(vehicle);
     }
+
+    @Test
+    void makesOnlyTheSelectedCustomersVehiclePrimary() {
+        UUID subject = UUID.randomUUID();
+        CustomerProfile profile = CustomerProfile.create(subject, "Tadi", "Mashongwa", "tadi@example.com", null);
+        SavedVehicle previous = SavedVehicle.create(profile.getId(), "Honda", "Civic", 2019, "1.5L", null);
+        previous.makePrimary();
+        SavedVehicle selected = SavedVehicle.create(profile.getId(), "Toyota", "Corolla", 2020, "1.8L", null);
+        CustomerProfileRepository profiles = mock(CustomerProfileRepository.class);
+        SavedVehicleRepository vehicles = mock(SavedVehicleRepository.class);
+        when(profiles.findByKeycloakUserId(subject)).thenReturn(Optional.of(profile));
+        when(vehicles.findByCustomerProfileId(profile.getId())).thenReturn(List.of(previous, selected));
+        SavedVehicleService service = new SavedVehicleService(profiles, vehicles);
+
+        service.makePrimary(subject, selected.getId());
+
+        assertThat(previous.isPrimaryVehicle()).isFalse();
+        assertThat(selected.isPrimaryVehicle()).isTrue();
+        verify(vehicles).saveAll(any());
+    }
 }

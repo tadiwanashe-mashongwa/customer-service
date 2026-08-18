@@ -43,4 +43,17 @@ class SavedVehicleControllerTest {
 
         assertThat(controller.list(jwt)).extracting(SavedVehicleResponse::make).containsExactly("Toyota");
     }
+
+    @Test
+    void makesOnlyTheAuthenticatedCustomersVehiclePrimary() {
+        UUID subject = UUID.randomUUID();
+        UUID vehicleId = UUID.randomUUID();
+        SavedVehicleService service = mock(SavedVehicleService.class);
+        SavedVehicleController controller = new SavedVehicleController(service);
+        Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "none"), Map.of("sub", subject.toString()));
+
+        controller.makePrimary(vehicleId, jwt);
+
+        verify(service).makePrimary(subject, vehicleId);
+    }
 }

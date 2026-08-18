@@ -36,6 +36,10 @@ public class SavedVehicle {
         return new SavedVehicle(customerProfileId, make, model, modelYear, engine, vin);
     }
 
+    public void makePrimary() { this.primaryVehicle = true; }
+
+    public void clearPrimary() { this.primaryVehicle = false; }
+
     public UUID getCustomerProfileId() { return customerProfileId; }
     public UUID getId() { return id; }
     public String getMake() { return make; }

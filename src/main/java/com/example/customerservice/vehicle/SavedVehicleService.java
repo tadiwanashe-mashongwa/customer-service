@@ -28,4 +28,15 @@ public class SavedVehicleService {
                 .orElseThrow(() -> new IllegalStateException("Customer profile not found"));
         return vehicles.findByCustomerProfileId(profile.getId());
     }
+
+    public void makePrimary(UUID keycloakUserId, UUID vehicleId) {
+        List<SavedVehicle> customerVehicles = list(keycloakUserId);
+        SavedVehicle selected = customerVehicles.stream()
+                .filter(vehicle -> vehicle.getId().equals(vehicleId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Saved vehicle not found"));
+        customerVehicles.forEach(SavedVehicle::clearPrimary);
+        selected.makePrimary();
+        vehicles.saveAll(customerVehicles);
+    }
 }

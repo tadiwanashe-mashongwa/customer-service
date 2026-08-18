@@ -23,4 +23,13 @@ class SavedVehicleTest {
         assertThat(vehicle.getCustomerProfileId()).isEqualTo(customerProfileId);
         assertThat(vehicle.isPrimaryVehicle()).isFalse();
     }
+
+    @Test
+    void canBeMarkedAsTheCustomersPrimaryVehicle() {
+        SavedVehicle vehicle = SavedVehicle.create(UUID.randomUUID(), "Toyota", "Corolla", 2020, "1.8L", null);
+
+        vehicle.makePrimary();
+
+        assertThat(vehicle.isPrimaryVehicle()).isTrue();
+    }
 }
