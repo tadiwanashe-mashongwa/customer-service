@@ -14,4 +14,11 @@ public class CustomerProfileService {
         return repository.findByKeycloakUserId(keycloakUserId)
                 .orElseGet(() -> repository.save(CustomerProfile.create(keycloakUserId, firstName, lastName, email, phoneNumber)));
     }
+
+    public CustomerProfile update(UUID keycloakUserId, UpdateCustomerProfileRequest request) {
+        CustomerProfile profile = repository.findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() -> new IllegalStateException("Customer profile not found"));
+        profile.update(request.firstName(), request.lastName(), request.email(), request.phoneNumber());
+        return repository.save(profile);
+    }
 }

@@ -41,7 +41,16 @@ public class CustomerProfile {
         return new CustomerProfile(keycloakUserId, firstName, lastName, email, phoneNumber);
     }
 
+    public void update(String firstName, String lastName, String email, String phoneNumber) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.updatedAt = Instant.now();
+    }
+
     public UUID getKeycloakUserId() { return keycloakUserId; }
     public String getEmail() { return email; }
+    public String getPhoneNumber() { return phoneNumber; }
     public long getVersion() { return version; }
 }

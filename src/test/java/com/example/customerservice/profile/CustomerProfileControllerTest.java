@@ -26,4 +26,19 @@ class CustomerProfileControllerTest {
         assertThat(response.keycloakUserId()).isEqualTo(subject);
         assertThat(response.email()).isEqualTo("tadi@example.com");
     }
+
+    @Test
+    void updatesProfileForTheAuthenticatedJwtSubject() {
+        UUID subject = UUID.randomUUID();
+        CustomerProfileService service = mock(CustomerProfileService.class);
+        CustomerProfile profile = CustomerProfile.create(subject, "Tadi", "Mashongwa", "tadi@example.com", "+263771000000");
+        when(service.update(eq(subject), any())).thenReturn(profile);
+        CustomerProfileController controller = new CustomerProfileController(service);
+        Jwt jwt = new Jwt(subject.toString(), Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "none"), Map.of("sub", subject.toString()));
+
+        CustomerProfileResponse response = controller.update(new UpdateCustomerProfileRequest("Tadi", "Mashongwa", "tadi@example.com", "+263771000000"), jwt);
+
+        assertThat(response.keycloakUserId()).isEqualTo(subject);
+        verify(service).update(eq(subject), any());
+    }
 }
