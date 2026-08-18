@@ -64,4 +64,20 @@ class SavedVehicleServiceTest {
         assertThat(selected.isPrimaryVehicle()).isTrue();
         verify(vehicles).saveAll(any());
     }
+
+    @Test
+    void removesOnlyTheAuthenticatedCustomersVehicle() {
+        UUID subject = UUID.randomUUID();
+        CustomerProfile profile = CustomerProfile.create(subject, "Tadi", "Mashongwa", "tadi@example.com", null);
+        SavedVehicle vehicle = SavedVehicle.create(profile.getId(), "Toyota", "Corolla", 2020, "1.8L", null);
+        CustomerProfileRepository profiles = mock(CustomerProfileRepository.class);
+        SavedVehicleRepository vehicles = mock(SavedVehicleRepository.class);
+        when(profiles.findByKeycloakUserId(subject)).thenReturn(Optional.of(profile));
+        when(vehicles.findByCustomerProfileId(profile.getId())).thenReturn(List.of(vehicle));
+        SavedVehicleService service = new SavedVehicleService(profiles, vehicles);
+
+        service.remove(subject, vehicle.getId());
+
+        verify(vehicles).delete(vehicle);
+    }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,5 +44,10 @@ public class SavedVehicleController {
     @PutMapping("/{vehicleId}/primary")
     public void makePrimary(@PathVariable UUID vehicleId, @AuthenticationPrincipal Jwt jwt) {
         service.makePrimary(UUID.fromString(jwt.getSubject()), vehicleId);
+    }
+
+    @DeleteMapping("/{vehicleId}")
+    public void remove(@PathVariable UUID vehicleId, @AuthenticationPrincipal Jwt jwt) {
+        service.remove(UUID.fromString(jwt.getSubject()), vehicleId);
     }
 }

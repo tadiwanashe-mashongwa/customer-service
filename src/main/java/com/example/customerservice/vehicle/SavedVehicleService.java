@@ -39,4 +39,12 @@ public class SavedVehicleService {
         selected.makePrimary();
         vehicles.saveAll(customerVehicles);
     }
+
+    public void remove(UUID keycloakUserId, UUID vehicleId) {
+        SavedVehicle vehicle = list(keycloakUserId).stream()
+                .filter(savedVehicle -> savedVehicle.getId().equals(vehicleId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Saved vehicle not found"));
+        vehicles.delete(vehicle);
+    }
 }
