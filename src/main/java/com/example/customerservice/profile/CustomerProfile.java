@@ -50,6 +50,7 @@ public class CustomerProfile {
     }
 
     public UUID getKeycloakUserId() { return keycloakUserId; }
+    public UUID getId() { return id; }
     public String getEmail() { return email; }
     public String getPhoneNumber() { return phoneNumber; }
     public long getVersion() { return version; }

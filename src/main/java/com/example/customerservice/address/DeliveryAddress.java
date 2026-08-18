@@ -35,5 +35,9 @@ public class DeliveryAddress {
     }
 
     public UUID getCustomerProfileId() { return customerProfileId; }
+    public String getLine1() { return line1; }
+    public String getCity() { return city; }
+    public String getCountry() { return country; }
+    public String getPostalCode() { return postalCode; }
     public boolean isDefaultAddress() { return defaultAddress; }
 }
