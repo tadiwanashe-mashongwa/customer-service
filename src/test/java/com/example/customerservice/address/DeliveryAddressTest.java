@@ -16,4 +16,13 @@ class DeliveryAddressTest {
         assertThat(address.getCustomerProfileId()).isEqualTo(customerProfileId);
         assertThat(address.isDefaultAddress()).isFalse();
     }
+
+    @Test
+    void canBeMarkedAsTheCustomersDefaultAddress() {
+        DeliveryAddress address = DeliveryAddress.create(UUID.randomUUID(), "12 Main Street", "Harare", "Zimbabwe", "00000");
+
+        address.makeDefault();
+
+        assertThat(address.isDefaultAddress()).isTrue();
+    }
 }

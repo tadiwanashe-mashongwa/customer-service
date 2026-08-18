@@ -28,4 +28,13 @@ public class DeliveryAddressService {
                 .orElseThrow(() -> new IllegalStateException("Customer profile not found"));
         return addresses.findByCustomerProfileId(profile.getId());
     }
+
+    public void makeDefault(UUID keycloakUserId, UUID addressId) {
+        List<DeliveryAddress> customerAddresses = list(keycloakUserId);
+        DeliveryAddress selected = customerAddresses.stream().filter(address -> address.getId().equals(addressId)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Delivery address not found"));
+        customerAddresses.forEach(DeliveryAddress::clearDefault);
+        selected.makeDefault();
+        addresses.saveAll(customerAddresses);
+    }
 }

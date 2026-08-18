@@ -42,4 +42,24 @@ class DeliveryAddressServiceTest {
 
         assertThat(service.list(subject)).containsExactly(address);
     }
+
+    @Test
+    void makesOnlyTheSelectedCustomersAddressDefault() {
+        UUID subject = UUID.randomUUID();
+        CustomerProfile profile = CustomerProfile.create(subject, "Tadi", "Mashongwa", "tadi@example.com", null);
+        DeliveryAddress previous = DeliveryAddress.create(profile.getId(), "Old Street", "Harare", "Zimbabwe", "00000");
+        previous.makeDefault();
+        DeliveryAddress selected = DeliveryAddress.create(profile.getId(), "New Street", "Harare", "Zimbabwe", "00000");
+        CustomerProfileRepository profiles = mock(CustomerProfileRepository.class);
+        DeliveryAddressRepository addresses = mock(DeliveryAddressRepository.class);
+        when(profiles.findByKeycloakUserId(subject)).thenReturn(Optional.of(profile));
+        when(addresses.findByCustomerProfileId(profile.getId())).thenReturn(List.of(previous, selected));
+        DeliveryAddressService service = new DeliveryAddressService(profiles, addresses);
+
+        service.makeDefault(subject, selected.getId());
+
+        assertThat(previous.isDefaultAddress()).isFalse();
+        assertThat(selected.isDefaultAddress()).isTrue();
+        verify(addresses).saveAll(any());
+    }
 }

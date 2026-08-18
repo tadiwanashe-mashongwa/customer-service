@@ -34,7 +34,12 @@ public class DeliveryAddress {
         return new DeliveryAddress(customerProfileId, line1, city, country, postalCode);
     }
 
+    public void makeDefault() { this.defaultAddress = true; }
+
+    public void clearDefault() { this.defaultAddress = false; }
+
     public UUID getCustomerProfileId() { return customerProfileId; }
+    public UUID getId() { return id; }
     public String getLine1() { return line1; }
     public String getCity() { return city; }
     public String getCountry() { return country; }

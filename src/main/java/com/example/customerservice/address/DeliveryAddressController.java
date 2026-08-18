@@ -21,4 +21,8 @@ public class DeliveryAddressController {
     public List<DeliveryAddressResponse> list(@AuthenticationPrincipal Jwt jwt) {
         return service.list(UUID.fromString(jwt.getSubject())).stream().map(DeliveryAddressResponse::from).toList();
     }
+    @PutMapping("/{addressId}/default")
+    public void makeDefault(@PathVariable UUID addressId, @AuthenticationPrincipal Jwt jwt) {
+        service.makeDefault(UUID.fromString(jwt.getSubject()), addressId);
+    }
 }

@@ -26,4 +26,17 @@ class DeliveryAddressControllerTest {
         assertThat(response.line1()).isEqualTo("12 Main Street");
         verify(service).add(eq(subject), anyString(), anyString(), anyString(), anyString());
     }
+
+    @Test
+    void makesOnlyTheAuthenticatedCustomersAddressDefault() {
+        UUID subject = UUID.randomUUID();
+        UUID addressId = UUID.randomUUID();
+        DeliveryAddressService service = mock(DeliveryAddressService.class);
+        DeliveryAddressController controller = new DeliveryAddressController(service);
+        Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "none"), Map.of("sub", subject.toString()));
+
+        controller.makeDefault(addressId, jwt);
+
+        verify(service).makeDefault(subject, addressId);
+    }
 }
