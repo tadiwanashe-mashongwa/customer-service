@@ -37,5 +37,11 @@ public class SavedVehicle {
     }
 
     public UUID getCustomerProfileId() { return customerProfileId; }
+    public UUID getId() { return id; }
+    public String getMake() { return make; }
+    public String getModel() { return model; }
+    public int getModelYear() { return modelYear; }
+    public String getEngine() { return engine; }
+    public String getVin() { return vin; }
     public boolean isPrimaryVehicle() { return primaryVehicle; }
 }
