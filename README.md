@@ -59,6 +59,8 @@ docker run --rm -p 8085:8085 `
 
 All `/api/**` endpoints require a Bearer JWT issued by Keycloak.
 
+Interactive API documentation is available at `http://localhost:8085/swagger-ui/index.html`; the OpenAPI JSON is available at `/v3/api-docs`.
+
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/customers/me` | Get or lazily create the caller's profile. |
