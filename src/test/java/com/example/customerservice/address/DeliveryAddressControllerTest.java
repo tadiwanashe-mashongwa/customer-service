@@ -39,4 +39,17 @@ class DeliveryAddressControllerTest {
 
         verify(service).makeDefault(subject, addressId);
     }
+
+    @Test
+    void removesOnlyTheAuthenticatedCustomersAddress() {
+        UUID subject = UUID.randomUUID();
+        UUID addressId = UUID.randomUUID();
+        DeliveryAddressService service = mock(DeliveryAddressService.class);
+        DeliveryAddressController controller = new DeliveryAddressController(service);
+        Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "none"), Map.of("sub", subject.toString()));
+
+        controller.remove(addressId, jwt);
+
+        verify(service).remove(subject, addressId);
+    }
 }

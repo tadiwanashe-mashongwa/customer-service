@@ -62,4 +62,20 @@ class DeliveryAddressServiceTest {
         assertThat(selected.isDefaultAddress()).isTrue();
         verify(addresses).saveAll(any());
     }
+
+    @Test
+    void removesOnlyTheAuthenticatedCustomersAddress() {
+        UUID subject = UUID.randomUUID();
+        CustomerProfile profile = CustomerProfile.create(subject, "Tadi", "Mashongwa", "tadi@example.com", null);
+        DeliveryAddress address = DeliveryAddress.create(profile.getId(), "12 Main Street", "Harare", "Zimbabwe", "00000");
+        CustomerProfileRepository profiles = mock(CustomerProfileRepository.class);
+        DeliveryAddressRepository addresses = mock(DeliveryAddressRepository.class);
+        when(profiles.findByKeycloakUserId(subject)).thenReturn(Optional.of(profile));
+        when(addresses.findByCustomerProfileId(profile.getId())).thenReturn(List.of(address));
+        DeliveryAddressService service = new DeliveryAddressService(profiles, addresses);
+
+        service.remove(subject, address.getId());
+
+        verify(addresses).delete(address);
+    }
 }

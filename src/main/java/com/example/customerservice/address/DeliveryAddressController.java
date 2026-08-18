@@ -25,4 +25,9 @@ public class DeliveryAddressController {
     public void makeDefault(@PathVariable UUID addressId, @AuthenticationPrincipal Jwt jwt) {
         service.makeDefault(UUID.fromString(jwt.getSubject()), addressId);
     }
+
+    @DeleteMapping("/{addressId}")
+    public void remove(@PathVariable UUID addressId, @AuthenticationPrincipal Jwt jwt) {
+        service.remove(UUID.fromString(jwt.getSubject()), addressId);
+    }
 }

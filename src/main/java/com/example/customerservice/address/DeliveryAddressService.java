@@ -37,4 +37,12 @@ public class DeliveryAddressService {
         selected.makeDefault();
         addresses.saveAll(customerAddresses);
     }
+
+    public void remove(UUID keycloakUserId, UUID addressId) {
+        DeliveryAddress address = list(keycloakUserId).stream()
+                .filter(deliveryAddress -> deliveryAddress.getId().equals(addressId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Delivery address not found"));
+        addresses.delete(address);
+    }
 }
