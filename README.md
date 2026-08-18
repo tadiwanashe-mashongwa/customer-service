@@ -1,115 +1,166 @@
 # SpareLink Customer Service
 
 [![CI](https://github.com/tadiwanashe-mashongwa/customer-service/actions/workflows/ci.yml/badge.svg)](https://github.com/tadiwanashe-mashongwa/customer-service/actions/workflows/ci.yml)
-[![Coverage](https://raw.githubusercontent.com/tadiwanashe-mashongwa/customer-service/main/.github/badges/jacoco.svg)](https://github.com/tadiwanashe-mashongwa/customer-service/actions/workflows/ci.yml)
+[![JaCoCo coverage](https://github.com/tadiwanashe-mashongwa/customer-service/raw/main/.github/badges/jacoco.svg)](https://github.com/tadiwanashe-mashongwa/customer-service/actions/workflows/ci.yml)
 [![Java 21](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot 3.5.5](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen)](https://spring.io/projects/spring-boot)
 
-Customer Service owns customer-facing data in the **SpareLink** automotive spare-parts platform: profiles, delivery addresses, and saved vehicles. Keycloak owns registration, credentials, roles, and access tokens. The service trusts a Keycloak JWT and derives the caller from its `sub` claim.
+Customer profile microservice for **SpareLink**, an automotive spare-parts platform. It links Keycloak identities to local customer data, manages delivery addresses and saved vehicles, and ensures every mutation belongs to the authenticated customer.
 
-**Current JaCoCo instruction coverage: 87.9%.**
+## Highlights
 
-## Service boundary
+- Java 21, Spring Boot 3.5.5, PostgreSQL, Flyway, JPA/Hibernate
+- Keycloak JWT resource-server security; customer identity is always derived from `JWT.sub`
+- Customer profiles, delivery addresses, saved vehicles, primary/default selection
+- Ownership-safe deletion and mutation rules
+- OpenAPI/Swagger, Actuator, Docker, GitHub Actions, JaCoCo
+- Testcontainers PostgreSQL repository tests with real Flyway migrations
 
-| Concern | Owner |
-| --- | --- |
-| Login, registration, passwords, JWTs | Keycloak |
-| Profiles, addresses, saved vehicles | Customer Service |
-| Parts and prices | Catalogue Service |
-| Stock | Inventory Service |
-| Orders | Order Service |
-| Payments | Payment Service |
+## Architecture
 
-```text
-Browser / mobile client ── Bearer JWT ──> Customer Service :8085 ──> PostgreSQL
-                                           ▲
-                                           └── Keycloak issuer and signing keys
+```mermaid
+flowchart LR
+    Client[Web / Mobile Client] -->|Bearer JWT| Customer[customer-service]
+    Keycloak[Keycloak] -->|Issues JWT| Client
+    Customer -->|Validate issuer and JWT| Keycloak
+    Customer -->|JPA + Flyway| Postgres[(PostgreSQL)]
 ```
 
-The customer ID is never accepted from request input. Address and vehicle selection/deletion are scoped to the authenticated JWT subject, so a customer cannot modify another customer's records.
+## Customer profile flow
 
-## Capabilities
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant CS as customer-service
+    participant K as Keycloak
+    participant DB as PostgreSQL
 
-- Lazily creates a local profile for a valid Keycloak subject.
-- Maintains customer profile details, delivery addresses, and saved vehicles.
-- Allows one default delivery address and one primary vehicle per customer.
-- Persists through PostgreSQL, JPA/Hibernate, and versioned Flyway migrations.
-- Provides OpenAPI/Swagger, Actuator health, Docker, CI, JaCoCo and PostgreSQL Testcontainers tests.
-
-## Stack
-
-Java 21 · Spring Boot 3.5.5 · Maven · PostgreSQL · JPA/Hibernate · Flyway · Spring Security OAuth2 Resource Server · Keycloak · OpenAPI/Swagger · Testcontainers · JaCoCo · Docker · GitHub Actions
-
-## API
-
-Every `/api/**` endpoint requires `Authorization: Bearer <access-token>`.
-
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/customers/me` | Read/create the caller profile. |
-| `PUT` | `/api/customers/me` | Update profile details. |
-| `POST`, `GET` | `/api/customers/me/addresses` | Add/list caller addresses. |
-| `PUT` | `/api/customers/me/addresses/{addressId}/default` | Select default address. |
-| `DELETE` | `/api/customers/me/addresses/{addressId}` | Delete owned address. |
-| `POST`, `GET` | `/api/customers/me/vehicles` | Add/list caller vehicles. |
-| `PUT` | `/api/customers/me/vehicles/{vehicleId}/primary` | Select primary vehicle. |
-| `DELETE` | `/api/customers/me/vehicles/{vehicleId}` | Delete owned vehicle. |
-| `GET` | `/actuator/health` | Health check. |
-
-Example:
-
-```http
-POST /api/customers/me/vehicles
-Authorization: Bearer <access-token>
-Content-Type: application/json
-
-{"make":"Toyota","model":"Corolla","modelYear":2020,"engine":"1.8L","vin":"JTDBR32E720000000"}
+    C->>CS: GET /api/customers/me (Bearer JWT)
+    CS->>K: Validate JWT issuer/signature
+    CS->>DB: Find profile by JWT.sub
+    alt First request
+        CS->>DB: Create local customer profile
+    end
+    DB-->>CS: Customer profile
+    CS-->>C: Profile response
 ```
 
-## Documentation and data model
+## Ownership rule
 
-| Resource | URL |
-| --- | --- |
-| Swagger UI | `http://localhost:8085/swagger-ui/index.html` |
-| OpenAPI JSON | `http://localhost:8085/v3/api-docs` |
-| Health | `http://localhost:8085/actuator/health` |
-
-```text
-customer_profiles 1 ─── * delivery_addresses
-        │
-        └────────────── * saved_vehicles
+```mermaid
+flowchart TD
+    A[Authenticated request] --> B[Read JWT.sub]
+    B --> C[Find local customer profile]
+    C --> D[Load only that profile's address or vehicle]
+    D --> E{Owned by caller?}
+    E -->|Yes| F[Apply mutation]
+    E -->|No| G[Reject request]
 ```
 
-Flyway owns `customer_profiles`, `delivery_addresses`, and `saved_vehicles`. Hibernate uses `ddl-auto=validate`, so it validates rather than creates the schema.
+## Database model
 
-## Run locally
+```mermaid
+erDiagram
+    CUSTOMER_PROFILES ||--o{ DELIVERY_ADDRESSES : owns
+    CUSTOMER_PROFILES ||--o{ SAVED_VEHICLES : owns
+    CUSTOMER_PROFILES {
+        uuid id PK
+        uuid keycloak_user_id UK
+        varchar first_name
+        varchar last_name
+        varchar email
+        varchar phone_number
+        timestamp created_at
+        timestamp updated_at
+        bigint version
+    }
+    DELIVERY_ADDRESSES {
+        uuid id PK
+        uuid customer_profile_id FK
+        varchar line1
+        varchar city
+        varchar country
+        varchar postal_code
+        boolean default_address
+        bigint version
+    }
+    SAVED_VEHICLES {
+        uuid id PK
+        uuid customer_profile_id FK
+        varchar make
+        varchar model
+        int model_year
+        varchar engine
+        varchar vin
+        boolean primary_vehicle
+        bigint version
+    }
+```
 
-Prerequisites: Java 21, Maven, PostgreSQL, and a Keycloak realm.
+## Local run
+
+Start the complete SpareLink stack from the platform repository:
 
 ```powershell
-$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/customer_db"
-$env:SPRING_DATASOURCE_USERNAME = "postgres"
-$env:SPRING_DATASOURCE_PASSWORD = "your-password"
+docker compose up --build -d
+```
+
+Or run the service directly:
+
+```powershell
 $env:KEYCLOAK_ISSUER_URI = "http://localhost:8080/realms/sparelink"
 mvn spring-boot:run
 ```
 
-## Run with Docker
+| Resource | URL |
+|---|---|
+| Customer API | `http://localhost:8085` |
+| Swagger UI | `http://localhost:8085/swagger-ui/index.html` |
+| OpenAPI JSON | `http://localhost:8085/v3/api-docs` |
+| Health | `http://localhost:8085/actuator/health` |
+| Keycloak | `http://localhost:8080` |
 
-```powershell
-docker build -t sparelink/customer-service .
-docker run --rm -p 8085:8085 `
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/customer_db `
-  -e SPRING_DATASOURCE_USERNAME=postgres `
-  -e SPRING_DATASOURCE_PASSWORD=your-password `
-  -e KEYCLOAK_ISSUER_URI=http://host.docker.internal:8080/realms/sparelink `
-  sparelink/customer-service
-```
+## API and access control
 
-## Quality gates
+All `/api/**` endpoints require a Keycloak bearer token. Health and OpenAPI endpoints are public.
+
+| Endpoint | Authenticated customer |
+|---|---:|
+| `GET /api/customers/me` | Read/create own profile |
+| `PUT /api/customers/me` | Update own profile |
+| `POST`, `GET /api/customers/me/addresses` | Add/list own addresses |
+| `PUT /api/customers/me/addresses/{addressId}/default` | Select own default address |
+| `DELETE /api/customers/me/addresses/{addressId}` | Delete own address |
+| `POST`, `GET /api/customers/me/vehicles` | Add/list own vehicles |
+| `PUT /api/customers/me/vehicles/{vehicleId}/primary` | Select own primary vehicle |
+| `DELETE /api/customers/me/vehicles/{vehicleId}` | Delete own vehicle |
+
+## Testing strategy
+
+The suite follows TDD and uses the smallest realistic test layer for each behaviour:
+
+| Layer | Scope |
+|---|---|
+| Unit | Profile, address and vehicle domain state changes |
+| Service | Ownership filtering, deletion and primary/default selection |
+| MVC slice | JWT subject propagation and validation |
+| JPA slice | PostgreSQL repository queries with real Flyway migrations |
+
+Run all tests:
 
 ```powershell
 mvn test
 ```
 
-The TDD suite includes domain, service, controller, and PostgreSQL Testcontainers repository tests. JaCoCo reports are generated at `target/site/jacoco/`. GitHub Actions runs the full suite on each push and pull request, uploads coverage, and refreshes the badge on successful `main` builds.
+The JaCoCo report is generated at `target/site/jacoco/index.html`. GitHub Actions uploads it and refreshes the coverage badge after a successful main-branch build.
+
+## Project structure
+
+```text
+src/main/java/com/example/customerservice
+├── profile         customer profile domain, API and persistence
+├── address         delivery address domain, API and persistence
+├── vehicle         saved vehicle domain, API and persistence
+├── config          security and OpenAPI configuration
+└── CustomerServiceApplication.java
+```
