@@ -21,4 +21,11 @@ public class CustomerProfileService {
         profile.update(request.firstName(), request.lastName(), request.email(), request.phoneNumber());
         return repository.save(profile);
     }
+
+    public String paymentPhoneNumber(UUID keycloakUserId) {
+        return repository.findByKeycloakUserId(keycloakUserId)
+                .map(CustomerProfile::getPhoneNumber)
+                .filter(phoneNumber -> !phoneNumber.isBlank())
+                .orElseThrow(() -> new IllegalStateException("Customer payment contact not found"));
+    }
 }

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class CustomerProfileControllerTest {
@@ -40,5 +41,32 @@ class CustomerProfileControllerTest {
 
         assertThat(response.keycloakUserId()).isEqualTo(subject);
         verify(service).update(eq(subject), any());
+    }
+
+    @Test
+    void returnsThePaymentContactForTheRequestedCustomerToPaymentService() {
+        UUID customerId = UUID.randomUUID();
+        CustomerProfileService service = mock(CustomerProfileService.class);
+        when(service.paymentPhoneNumber(customerId)).thenReturn("+263771000000");
+        CustomerProfileController controller = new CustomerProfileController(service);
+        Jwt jwt = new Jwt("payment-service", Instant.now(), Instant.now().plusSeconds(60),
+                Map.of("alg", "none"), Map.of("sub", "payment-service", "azp", "payment-service"));
+
+        PaymentContactResponse response = controller.paymentContact(customerId, jwt);
+
+        assertThat(response.phoneNumber()).isEqualTo("+263771000000");
+        verify(service).paymentPhoneNumber(customerId);
+    }
+
+    @Test
+    void rejectsPaymentContactRequestsFromOtherClients() {
+        CustomerProfileService service = mock(CustomerProfileService.class);
+        CustomerProfileController controller = new CustomerProfileController(service);
+        Jwt jwt = new Jwt("another-service", Instant.now(), Instant.now().plusSeconds(60),
+                Map.of("alg", "none"), Map.of("sub", "another-service", "azp", "another-service"));
+
+        assertThatThrownBy(() -> controller.paymentContact(UUID.randomUUID(), jwt))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        verifyNoInteractions(service);
     }
 }
